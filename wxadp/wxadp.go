@@ -2,6 +2,7 @@ package wxadp
 
 import (
 	"net/http"
+	"strconv"
 	"suren/gateway"
 	"time"
 
@@ -10,26 +11,17 @@ import (
 )
 
 const (
-	APP_ID    = "wx9a5d263b039e6755"
-	SECRET    = "29789cc7663433e29e25ce0697e44aa5"
-	TOKEN     = "l1huanyu"
-	WECHAT_ID = "hyhappyhouse"
-	EVENT     = "event"
-	TEXT      = "text"
-	SUBSCRIBE = "subscribe"
+	_APP_ID      = "wx9a5d263b039e6755"
+	_SECRET      = "29789cc7663433e29e25ce0697e44aa5"
+	_TOKEN       = "l1huanyu"
+	_WECHAT_ID   = "hyhappyhouse"
+	_EVENT       = "_event"
+	_TEXT        = "text"
+	_SUBSCRIBE   = "subscribe"
+	_UNSUBSCRIBE = "unsubscribe"
 )
 
-type MsgRx struct {
-	ToUserName   string `xml:"ToUserName"`   //开发者微信号
-	FromUserName string `xml:"FromUserName"` //发送方账号（一个OpenID）
-	CreateTime   int    `xml:"CreateTime"`   //消息创建时间
-	MsgType      string `xml:"MsgType"`      //text
-	Content      string `xml:"Content"`      //文本消息内容
-	MsgId        int64  `xml:"MsgId"`        //消息id
-	Event        string `xml:"Event"`        //事件类型
-}
-
-var s = suren.New(APP_ID, SECRET, TOKEN)
+var s = suren.New(_APP_ID, _SECRET, _TOKEN)
 
 func ResponseWechat(c echo.Context) error {
 	echostr := c.QueryParam("echostr")
@@ -45,8 +37,8 @@ func ResponseWechat(c echo.Context) error {
 }
 
 func ReceiveMessage(c echo.Context) error {
-	content := ""
-	msgRx := new(MsgRx)
+	contentTx := ""
+	msgRx := new(suren.TextMsgRx)
 	err := c.Bind(msgRx)
 	if err != nil {
 		return err
@@ -56,25 +48,35 @@ func ReceiveMessage(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
+	contentRx, err := strconv.Atoi(msgRx.Content)
+	if err != nil {
+		contentTx = gateway.NotSurport()
+		goto RESPONSE
+	}
+
 	switch msgRx.MsgType {
-	case TEXT:
-		content = gateway.Route(msgRx.FromUserName, msgRx.Content)
-	case EVENT:
-		if msgRx.Event == SUBSCRIBE {
-			content = "选择吧！\n0：被人安利\n1：安利别人"
+	case _TEXT:
+		contentTx = gateway.Route(msgRx.FromUserName, contentRx)
+	case _EVENT:
+		if msgRx.Event == _SUBSCRIBE {
+			contentTx = gateway.Prologue()
 		} else {
+			if msgRx.Event == _UNSUBSCRIBE {
+				gateway.Realese(msgRx.FromUserName)
+			}
 			return c.NoContent(http.StatusOK)
 		}
 	default:
-		content = "不支持の消息类型"
+		contentTx = gateway.NotSurport()
 	}
 
+RESPONSE:
 	msgTx := &suren.TextMsgTx{
 		ToUserName:   msgRx.FromUserName,
 		FromUserName: msgRx.ToUserName,
 		CreateTime:   int(time.Now().Unix()),
-		MsgType:      TEXT,
-		Content:      content,
+		MsgType:      _TEXT,
+		Content:      contentTx,
 	}
 
 	return c.XML(http.StatusOK, msgTx)

@@ -1,34 +1,6 @@
 package gateway
 
-import (
-	"sync"
-)
-
-type safaMap struct {
-	sync.RWMutex
-	Map map[string]func(userID, content string) string
-}
-
-func newSafaMap() *safaMap {
-	sm := new(safaMap)
-	sm.Map = make(map[string]func(userID, content string) string)
-	return sm
-}
-
-func (sm *safaMap) read(key string) (func(userID, content string) string, bool) {
-	sm.RLock()
-	value, ok := sm.Map[key]
-	sm.RUnlock()
-	return value, ok
-}
-
-func (sm *safaMap) write(key string, value func(userID, content string) string) {
-	sm.Lock()
-	sm.Map[key] = value
-	sm.Unlock()
-}
-
-var todos *safaMap
+var todos *safeMap
 
 func init() {
 	todos = newSafaMap()
@@ -36,32 +8,43 @@ func init() {
 
 //操作类型
 const (
-	_GET = "0"
-	_SET = "1"
+	_GET = iota
+	_SET
 )
 
+//提示消息
 const (
-	_GET_ACTIVATED = "接下来，选择什么类型呢？\n0：小说\n1：电影"
-)
-
-const (
-	_SET_ACTIVATED = "接下来，选择什么类型呢？\n0：小说\n1：电影"
+	_Prologue      = "选择吧！\n0：被人安利\n1：安利别人"
+	_NOT_SURPORT   = "请输入有效数字≧ ﹏ ≦"
+	_GET_ACTIVATED = "接下来，选择什么类型呢🧐？\n0：小说 1：电影\n2：随便来点啥"
+	_GET_SELECTED  = "Buling Buling~久等啦~您要的安利已上菜~\n%s\n0：下一个 1：返回"
+	_SET_ACTIVATED = "接下来，选择什么类型呢🧐？\n0：小说\n1：电影"
 )
 
 //Route 接受来自于wxadp层的用户消息
-func Route(userID, content string) string {
-	if len(userID) == 0 || len(content) == 0 {
-		return "错误の输入"
-	}
-
+func Route(userID string, content int) string {
 	if todo, ok := todos.read(userID); ok {
 		return todo(userID, content)
 	}
-
 	return active(userID, content)
 }
 
-func active(userID, content string) string {
+//Realese 释放取消关注的用户的资源
+func Realese(userID string) {
+	todos.delete(userID)
+}
+
+//Prologue 开场白
+func Prologue() string {
+	return _Prologue
+}
+
+//NotSurport 不支持
+func NotSurport() string {
+	return _NOT_SURPORT
+}
+
+func active(userID string, content int) string {
 	switch content {
 	case _GET:
 		todos.write(userID, getSelecteType)
@@ -70,23 +53,6 @@ func active(userID, content string) string {
 		todos.write(userID, setSelecteType)
 		return _SET_ACTIVATED
 	default:
-		return "错误の操作类型"
+		return _Prologue
 	}
-}
-
-func getSelecteType(userID, content string) string {
-	//TODO:具体实现，调用下层函数
-	todos.write(userID, getNextHop)
-	return "getSelectType"
-}
-
-func setSelecteType(userID, content string) string {
-	//TODO:具体实现，调用下层函数
-
-	return "setSelectType"
-}
-
-func getNextHop(userID, content string) string {
-	//TODO:具体实现，调用下层函数
-	return "选择吧！\n0：被人安利\n1：安利别人"
 }
