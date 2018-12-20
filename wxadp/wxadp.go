@@ -3,8 +3,8 @@ package wxadp
 import (
 	"net/http"
 	"strconv"
-	"suren/gateway"
 	"time"
+	"weshare/gateway"
 
 	"github.com/l1huanyu/suren"
 	"github.com/labstack/echo"
@@ -59,7 +59,7 @@ func ReceiveMessage(c echo.Context) error {
 		contentTx = gateway.Route(msgRx.FromUserName, contentRx)
 	case _EVENT:
 		if msgRx.Event == _SUBSCRIBE {
-			contentTx = gateway.Prologue()
+			contentTx = gateway.Prologue(msgRx.FromUserName)
 		} else {
 			if msgRx.Event == _UNSUBSCRIBE {
 				gateway.Realese(msgRx.FromUserName)

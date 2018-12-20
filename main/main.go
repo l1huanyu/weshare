@@ -1,7 +1,7 @@
 package main
 
 import (
-	"suren/wxadp"
+	"weshare/wxadp"
 
 	"github.com/labstack/echo"
 )
