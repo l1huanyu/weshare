@@ -9,7 +9,7 @@ import (
 
 const (
 	_DB_TYPE     = "postgres"
-	_DB_HOST     = "106.12.7.136"
+	_DB_HOST     = "weshare_pg_test"
 	_DB_PORT     = "5432"
 	_DB_USER     = "l1huanyu"
 	_DB_PASSWORD = "Li960127!"
@@ -27,4 +27,8 @@ func init() {
 		panic(fmt.Sprintf("failed to connect database, err = %s", err.Error()))
 	}
 	db.AutoMigrate(new(Post))
+}
+
+func CloseDB() {
+	db.Close()
 }

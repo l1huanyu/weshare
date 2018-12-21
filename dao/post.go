@@ -12,7 +12,6 @@ const (
 	SET_TYPE
 	SET_NAME
 	SET_SOURCE
-	SET_DESCRIPTION
 	SUCCEED
 )
 
@@ -36,7 +35,7 @@ func (p *Post) Create() error {
 	if db.NewRecord(p) {
 		return db.Create(p).Error
 	}
-	return errors.New("已存在")
+	return errors.New("Not New Record")
 }
 
 func (p *Post) Update() error {
@@ -51,9 +50,9 @@ func QueryPostByType(tp int) (*Post, error) {
 	return p, nil
 }
 
-func QueryPostByID(id int) (*Post, error) {
+func QueryPostRandomly() (*Post, error) {
 	p := new(Post)
-	if err := db.Where("state = ?", SUCCEED).First(p, id).Error; err != nil {
+	if err := db.Raw(fmt.Sprintf("select * from posts where state = %d order by random() limit 1", SUCCEED)).Scan(p).Error; err != nil {
 		return nil, err
 	}
 	return p, nil

@@ -2,11 +2,9 @@ package wxadp
 
 import (
 	"net/http"
-	"strconv"
 	"time"
 	"weshare/gateway"
 
-	"github.com/l1huanyu/suren"
 	"github.com/labstack/echo"
 )
 
@@ -15,30 +13,40 @@ const (
 	_SECRET      = "29789cc7663433e29e25ce0697e44aa5"
 	_TOKEN       = "l1huanyu"
 	_WECHAT_ID   = "hyhappyhouse"
-	_EVENT       = "_event"
+	_EVENT       = "event"
 	_TEXT        = "text"
 	_SUBSCRIBE   = "subscribe"
 	_UNSUBSCRIBE = "unsubscribe"
 )
 
-var s = suren.New(_APP_ID, _SECRET, _TOKEN)
+type (
+	TextMsgRx struct {
+		ToUserName   string `xml:"ToUserName"`   //开发者微信号
+		FromUserName string `xml:"FromUserName"` //发送方账号（一个OpenID）
+		CreateTime   int    `xml:"CreateTime"`   //消息创建时间
+		MsgType      string `xml:"MsgType"`      //text
+		Content      string `xml:"Content"`      //文本消息内容
+		MsgId        int64  `xml:"MsgId"`        //消息id
+		Event        string `xml:"Event"`        //事件类型
+	}
+
+	TextMsgTx struct {
+		ToUserName   string //接收方账号（收到的OpenID）
+		FromUserName string //开发者微信号
+		CreateTime   int    //消息创建时间
+		MsgType      string //text
+		Content      string //回复的消息内容（可换行）
+	}
+)
 
 func ResponseWechat(c echo.Context) error {
 	echostr := c.QueryParam("echostr")
-	if ok, err := s.CheckSignature(&suren.Signature{
-		Signature: c.QueryParam("signature"),
-		Timestamp: c.QueryParam("timestamp"),
-		Nonce:     c.QueryParam("nonce"),
-		Echostr:   echostr,
-	}); ok && err != nil {
-		return c.String(http.StatusOK, echostr)
-	}
-	return c.NoContent(http.StatusAccepted)
+	return c.String(http.StatusOK, echostr)
 }
 
 func ReceiveMessage(c echo.Context) error {
 	contentTx := ""
-	msgRx := new(suren.TextMsgRx)
+	msgRx := new(TextMsgRx)
 	err := c.Bind(msgRx)
 	if err != nil {
 		return err
@@ -48,15 +56,9 @@ func ReceiveMessage(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	contentRx, err := strconv.Atoi(msgRx.Content)
-	if err != nil {
-		contentTx = gateway.NotSurport()
-		goto RESPONSE
-	}
-
 	switch msgRx.MsgType {
 	case _TEXT:
-		contentTx = gateway.Route(msgRx.FromUserName, contentRx)
+		contentTx = gateway.Route(msgRx.FromUserName, msgRx.Content)
 	case _EVENT:
 		if msgRx.Event == _SUBSCRIBE {
 			contentTx = gateway.Prologue(msgRx.FromUserName)
@@ -70,8 +72,7 @@ func ReceiveMessage(c echo.Context) error {
 		contentTx = gateway.NotSurport()
 	}
 
-RESPONSE:
-	msgTx := &suren.TextMsgTx{
+	msgTx := &TextMsgTx{
 		ToUserName:   msgRx.FromUserName,
 		FromUserName: msgRx.ToUserName,
 		CreateTime:   int(time.Now().Unix()),
