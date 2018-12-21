@@ -1,6 +1,7 @@
 package wxadp
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 	"weshare/gateway"
@@ -17,6 +18,7 @@ const (
 	_TEXT        = "text"
 	_SUBSCRIBE   = "subscribe"
 	_UNSUBSCRIBE = "unsubscribe"
+	_ResponseXML = "<xml><ToUserName>%s</ToUserName><FromUserName>%s</FromUserName><CreateTime>%d</CreateTime><MsgType>text</MsgType><Content>%s</Content></xml>"
 )
 
 type (
@@ -80,5 +82,5 @@ func ReceiveMessage(c echo.Context) error {
 		Content:      contentTx,
 	}
 
-	return c.XML(http.StatusOK, msgTx)
+	return c.String(http.StatusOK, fmt.Sprintf(_ResponseXML, msgTx.ToUserName, msgTx.FromUserName, msgTx.CreateTime, msgTx.Content))
 }
