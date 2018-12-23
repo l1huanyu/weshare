@@ -54,12 +54,15 @@ func ReceiveMessage(c echo.Context) error {
 		return err
 	}
 
-	if len(msgRx.ToUserName) == 0 || len(msgRx.FromUserName) == 0 || len(msgRx.MsgType) == 0 || len(msgRx.Content) == 0 {
+	if len(msgRx.ToUserName) == 0 || len(msgRx.FromUserName) == 0 || len(msgRx.MsgType) == 0 {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
 	switch msgRx.MsgType {
 	case _TEXT:
+		if len(msgRx.Content) == 0 {
+			return c.NoContent(http.StatusBadRequest)
+		}
 		contentTx = gateway.Route(msgRx.FromUserName, msgRx.Content)
 	case _EVENT:
 		if msgRx.Event == _SUBSCRIBE {
@@ -71,7 +74,7 @@ func ReceiveMessage(c echo.Context) error {
 			return c.NoContent(http.StatusOK)
 		}
 	default:
-		contentTx = gateway.NotSurport()
+		contentTx = gateway.NotSuport()
 	}
 
 	msgTx := &TextMsgTx{

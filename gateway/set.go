@@ -19,8 +19,8 @@ func setSelectType(userID string, oldContent string) string {
 	if err != nil {
 		return _INTERNAL_ERROR
 	}
-	todos.write(userID, setSelectName)
-	return _SET_NAME
+	todos.writeHopMap(userID, setSelectName)
+	return _SET_TYPE
 }
 
 func setSelectName(userID string, content string) string {
@@ -30,12 +30,13 @@ func setSelectName(userID string, content string) string {
 	}
 	p.Name = content
 	p.State = dao.SET_NAME
+	p.Version++
 	err = p.Update()
 	if err != nil {
 		return _INTERNAL_ERROR
 	}
-	todos.write(userID, setSelectSource)
-	return _SET_SOURCE
+	todos.writeHopMap(userID, setSelectSource)
+	return _SET_NAME
 }
 
 func setSelectSource(userID string, content string) string {
@@ -47,11 +48,12 @@ func setSelectSource(userID string, content string) string {
 		p.Source = content
 	}
 	p.State = dao.SET_SOURCE
+	p.Version++
 	err = p.Update()
 	if err != nil {
 		return _INTERNAL_ERROR
 	}
-	todos.write(userID, setSelectDescription)
+	todos.writeHopMap(userID, setSelectDescription)
 	return _SET_SOURCE
 }
 
@@ -64,10 +66,11 @@ func setSelectDescription(userID string, content string) string {
 		p.Description = content
 	}
 	p.State = dao.SUCCEED
+	p.Version++
 	err = p.Update()
 	if err != nil {
 		return _INTERNAL_ERROR
 	}
-	todos.delete(userID)
+	todos.deleteHopMap(userID)
 	return fmt.Sprintf(_SET_DESCRIPTION, Prologue(userID))
 }

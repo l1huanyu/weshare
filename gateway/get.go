@@ -11,19 +11,21 @@ import (
 const (
 	_GET_TYPE_RANDOM = iota
 	_GET_TYPE_MOVIE
-	_GET_TYPE_NOVEL
+	_GET_TYPE_TELEPLAY
 	_GET_TYPE_GAME
 	_GET_TYPE_ANIMATION
-	_GET_TYPE_TELEPLAY
+	_GET_TYPE_NOVEL
+	_GET_TYPE_COMIC
 	_GET_TYPE_OTHERS
 )
 
 const (
-	_GET_NEXT_ONE = iota
+	_GET_LIKE = iota
+	_GET_NEXT_ONE
 	_GET_BACK
 )
 
-func getSelecteType(userID string, oldContent string) string {
+func getSelectType(userID string, oldContent string) string {
 	content, err := strconv.Atoi(oldContent)
 	if err != nil {
 		return _NOT_SUPORT
@@ -33,19 +35,24 @@ func getSelecteType(userID string, oldContent string) string {
 	}
 	response := new(dao.Post)
 	if content == 0 {
-		response, err = dao.QueryPostRandomly()
+		response, err = dao.QueryPostRandomly(todos.readReadMap(userID))
 	} else {
-		response, err = dao.QueryPostByType(content)
+		response, err = dao.QueryPostByType(content, todos.readReadMap(userID))
 	}
 	if err != nil {
 		resp := _INTERNAL_ERROR
 		if err == gorm.ErrRecordNotFound {
 			resp = _NOT_FOUND
+			if content == _GET_TYPE_RANDOM {
+				todos.deleteHopMap(userID)
+				resp = resp + "\n" + Prologue(userID)
+			}
 		}
 		return resp
 	}
-	todos.writeState(userID, content)
-	todos.write(userID, getNextOne)
+	todos.writeTypeMap(userID, content)
+	todos.writeReadMap(userID, response.ID)
+	todos.writeHopMap(userID, getNextOne)
 	return fmt.Sprintf(_GET_SELECTED, response.Display())
 }
 
@@ -55,29 +62,39 @@ func getNextOne(userID string, oldContent string) string {
 		return _NOT_SUPORT
 	}
 	switch content {
+	case _GET_LIKE:
+		if postID, ok := todos.readCurrentMap(userID); ok {
+			dao.Like(userID, postID)
+		}
+		fallthrough
 	case _GET_NEXT_ONE:
-		//TODO:具体实现，调用controller层函数
-		t, _ := todos.readState(userID)
+		t, _ := todos.readTypeMap(userID)
 		response := new(dao.Post)
 		var err error
 		if t == 0 {
-			response, err = dao.QueryPostRandomly()
+			response, err = dao.QueryPostRandomly(todos.readReadMap(userID))
 		} else {
-			response, err = dao.QueryPostByType(t)
+			response, err = dao.QueryPostByType(t, todos.readReadMap(userID))
 		}
 		if err != nil {
 			resp := _INTERNAL_ERROR
 			if err == gorm.ErrRecordNotFound {
 				resp = _NOT_FOUND
+				if t == _GET_TYPE_RANDOM {
+					todos.deleteTypeMap(userID)
+					todos.deleteHopMap(userID)
+					resp = resp + "\n" + Prologue(userID)
+				}
 			}
 			return resp
 		}
-		todos.write(userID, getNextOne)
-		return fmt.Sprintf(_GET_SELECTED, response)
+		todos.writeReadMap(userID, response.ID)
+		todos.writeHopMap(userID, getNextOne)
+		return fmt.Sprintf(_GET_SELECTED, response.Display())
 	case _GET_BACK:
-		todos.deleteState(userID)
-		todos.delete(userID)
-		return _Prologue
+		todos.deleteTypeMap(userID)
+		todos.deleteHopMap(userID)
+		return Prologue(userID)
 	default:
 		return _NOT_SUPORT
 	}

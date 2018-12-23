@@ -26,7 +26,7 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect database, err = %s", err.Error()))
 	}
-	db.AutoMigrate(new(Post))
+	db.AutoMigrate(new(Post), new(LikeLink))
 }
 
 func CloseDB() {
